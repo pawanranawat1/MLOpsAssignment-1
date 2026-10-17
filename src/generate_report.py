@@ -1,0 +1,567 @@
+"""Generate the final DOCX and PDF report after running the project."""
+
+
+from pathlib import Path
+
+import pandas as pd
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+)
+from reportlab.lib import colors
+
+from src.config import FIGURES_DIR, ROOT_DIR
+
+REPORT_DOCX = ROOT_DIR / "REPORT.docx"
+REPORT_PDF = ROOT_DIR / "REPORT.pdf"
+ARCHITECTURE = ROOT_DIR / "reports" / "architecture.png"
+
+
+def get_metrics():
+    comparison = FIGURES_DIR / "model_comparison.csv"
+    if comparison.exists():
+        return pd.read_csv(comparison)
+    return None
+
+
+def add_docx_page(doc, title, paragraphs=None, bullets=None, image=None):
+    doc.add_heading(title, level=1)
+    for text in paragraphs or []:
+        doc.add_paragraph(text)
+    for item in bullets or []:
+        doc.add_paragraph(item, style="List Bullet")
+    if image and Path(image).exists():
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run().add_picture(str(image), width=Inches(6.2))
+
+
+def build_docx(metrics):
+    doc = Document()
+    styles = doc.styles
+    styles["Normal"].font.name = "Arial"
+    styles["Normal"].font.size = Pt(10.5)
+
+    # Page 1
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.add_run("MLOps Assignment 01\n").bold = True
+    title.add_run("Heart Disease UCI Dataset - End-to-End ML System").bold = True
+    doc.add_paragraph(
+        "Machine Learning Operations (MLOps) - AIMLCZG523"
+    ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("Student: __________________________").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph(
+        "GitHub Repository: __________________________"
+    ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("Date: __________________________").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph(
+        "\nThis report describes a reproducible machine learning pipeline covering "
+        "data acquisition, EDA, model development, MLflow tracking, testing, CI/CD, "
+        "Docker, Kubernetes deployment, and monitoring."
+    )
+    doc.add_page_break()
+
+    # Page 2
+    add_docx_page(doc, "1. Objective and Problem Statement", [
+        (
+        'The objective is to build a cloud-ready machine learning'
+            'classifier that predicts the risk of heart disease from'
+            'patient health information. The solution follows an MLOps'
+            'workflow so that the model can be reproduced, tested,'
+            'packaged, deployed, and monitored.'
+        ),
+        (
+        'The implementation uses the Heart Disease UCI Cleveland'
+            'dataset. The original target contains values from 0 to 4.'
+            'For binary classification, target 0 is mapped to no'
+            'disease and values greater than 0 are mapped to disease.'
+        ),
+        (
+        'The system is designed as a learning-oriented'
+            'production-style pipeline rather than a medical diagnostic'
+            'tool. Predictions are for educational use only and must'
+            'not be treated as medical advice.'
+        ),
+    ], bullets=[
+        (
+        'Reproducible preprocessing using a scikit-learn'
+            'ColumnTransformer and Pipeline.'
+        ),
+        (
+        'Two baseline classification approaches: Logistic'
+            'Regression and Random Forest.'
+        ),
+        "Five-fold stratified cross-validation for Random Forest tuning.",
+        "MLflow for experiment tracking.",
+        "FastAPI for model serving and Prometheus-compatible metrics.",
+        (
+        'GitHub Actions for automated linting, testing, training,'
+            'and Docker build.'
+        ),
+        "Docker and Kubernetes for deployment."
+    ])
+    doc.add_page_break()
+
+    # Page 3
+    add_docx_page(doc, "2. Data Acquisition and EDA", [
+        (
+        'The data acquisition script downloads the Cleveland subset'
+            'from the UCI Machine Learning Repository. The raw file is'
+            'stored under data/raw. Missing values represented by the'
+            "character '?' are converted to missing values and handled"
+            'later by the preprocessing pipeline.'
+        ),
+        (
+        'The EDA script creates a class-balance chart, numeric'
+            'histograms, a correlation heatmap, and an'
+            'age-versus-maximum-heart-rate scatter plot. These'
+            'visualizations are saved under reports/figures.'
+        ),
+        (
+        'For the final submission, the student should insert the'
+            'actual EDA screenshots generated by their own run. This'
+            'avoids claiming results that were not executed in the'
+            "student's environment."
+        ),
+    ], bullets=[
+        (
+        'Class balance: inspect whether the target classes are'
+            'reasonably represented.'
+        ),
+        (
+        'Numeric distributions: inspect age, resting blood'
+            'pressure, cholesterol, maximum heart rate, and oldpeak.'
+        ),
+        "Correlation: inspect relationships among numerical variables.",
+        (
+        'Missing values: confirm the raw UCI representation and'
+            'verify that the preprocessing pipeline handles them.'
+        )
+    ])
+    doc.add_page_break()
+
+    # Page 4
+    add_docx_page(doc, "3. Feature Engineering and Model Development", [
+        (
+        'The preprocessing design separates numerical and'
+            'categorical/discrete variables. Numerical variables are'
+            'median-imputed and standardized. Categorical/discrete'
+            'variables are imputed using the most frequent value and'
+            'one-hot encoded.'
+        ),
+        (
+        'The transformations are inside the model pipeline. This'
+            'means the same transformations are automatically applied'
+            'at training and inference time, reducing the risk of'
+            'inconsistent preprocessing.'
+        ),
+        (
+        'Logistic Regression is used as a simple baseline because'
+            'it is easy to explain. Random Forest is used as a second'
+            'model because it can capture nonlinear relationships and'
+            'interactions without requiring manual feature'
+            'transformations.'
+        ),
+        (
+        'Random Forest is tuned with GridSearchCV using five-fold'
+            'StratifiedKFold cross-validation and ROC-AUC as the'
+            'optimization metric. The final model is then retrained on'
+            'the complete dataset before packaging.'
+        ),
+    ], bullets=[
+        "Train/test split: 80% / 20% with stratification.",
+        "Random state: 42 for repeatability.",
+        "Evaluation metrics: accuracy, precision, recall, and ROC-AUC.",
+        "Selected model: tuned Random Forest pipeline."
+    ])
+    doc.add_page_break()
+
+    # Page 5
+    doc.add_heading("4. Experimental Results", level=1)
+    doc.add_paragraph((
+                      'The training script generates the actual results after'
+                          'execution. The table below is populated automatically when'
+                          'src/generate_report.py is run after training.'
+                      ))
+    if metrics is not None:
+        table = doc.add_table(rows=1, cols=5)
+        headers = ["Model", "Accuracy", "Precision", "Recall", "ROC-AUC"]
+        for cell, text in zip(table.rows[0].cells, headers):
+            cell.text = text
+        for _, row in metrics.iterrows():
+            cells = table.add_row().cells
+            cells[0].text = str(row["model"])
+            for i, key in enumerate(["accuracy", "precision", "recall", "roc_auc"], start=1):
+                cells[i].text = f"{float(row[key]):.4f}"
+    else:
+        table = doc.add_table(rows=2, cols=5)
+        headers = ["Model", "Accuracy", "Precision", "Recall", "ROC-AUC"]
+        for cell, text in zip(table.rows[0].cells, headers):
+            cell.text = text
+        table.rows[1].cells[0].text = "Run python -m src.train first"
+        for cell in table.rows[1].cells[1:]:
+            cell.text = "-"
+    doc.add_paragraph((
+                      'The final report should discuss which model performed best'
+                          'and why ROC-AUC, precision, and recall matter for this'
+                          'classification problem. The discussion must use the'
+                          "student's actual results rather than invented values."
+                      ))
+    doc.add_page_break()
+
+    # Page 6
+    add_docx_page(doc, "5. MLflow Experiment Tracking and Reproducibility", [
+        (
+        'MLflow is configured with a local file-based tracking'
+            'store under mlruns. Each major training run records the'
+            'model name, split configuration, random state, metrics,'
+            'and evaluation plots. The tuned Random Forest run also'
+            'records its best hyperparameters and cross-validation'
+            'score.'
+        ),
+        (
+        'The model is saved with joblib. The saved object contains'
+            'the full preprocessing and model pipeline, so the'
+            'inference API does not need a separate preprocessing'
+            'implementation.'
+        ),
+        (
+        'The requirements.txt file defines the Python dependencies.'
+            'The Dockerfile creates an isolated environment containing'
+            'the same application dependencies and the packaged model.'
+        ),
+    ], bullets=[
+        "MLflow experiment: heart-disease-classification.",
+        "Artifacts: ROC curves, confusion matrices, and model comparison CSV.",
+        "Reusable model: models/heart_disease_model.joblib.",
+        "Metadata: models/model_metadata.json."
+    ])
+    doc.add_page_break()
+
+    # Page 7
+    add_docx_page(doc, "6. Testing and CI/CD", [
+        (
+        'Unit tests are implemented with pytest. One test verifies'
+            'that the preprocessing pipeline can handle missing values.'
+            'API tests verify the health endpoint and the prediction'
+            'response using a small dummy model, so the tests do not'
+            'depend on a trained model file.'
+        ),
+        (
+        'The GitHub Actions workflow performs linting, downloads'
+            'the dataset, runs tests, trains the model, builds the'
+            'Docker image, and uploads the generated machine learning'
+            'artifacts. The workflow is designed to stop when linting'
+            'or tests fail.'
+        ),
+        (
+        'For the final submission, a screenshot of the successful'
+            'GitHub Actions run should be inserted here.'
+        ),
+    ], bullets=[
+        "pytest -q",
+        "flake8 src tests --max-line-length=100",
+        "python -m src.data",
+        "python -m src.train",
+        "docker build -t heart-disease-api:ci ."
+    ])
+    doc.add_page_break()
+
+    # Page 8
+    add_docx_page(doc, "7. Containerization and API", [
+        (
+        'The model is exposed through FastAPI. The /predict'
+            'endpoint accepts patient data as JSON and returns a binary'
+            'prediction, a human-readable label, confidence, and the'
+            'disease probability. The /health endpoint reports service'
+            'health and whether the model has been loaded.'
+        ),
+        (
+        'The Docker image uses Python 3.11, installs requirements,'
+            'copies the application and model, and starts Uvicorn on'
+            'port 8000. Docker Compose is also supplied for a'
+            'one-command local deployment.'
+        ),
+        (
+        'Swagger UI at /docs provides an easy way to demonstrate'
+            'the API during the video recording.'
+        ),
+    ], bullets=[
+        "Local API: http://127.0.0.1:8000/docs",
+        "Health: http://127.0.0.1:8000/health",
+        "Metrics: http://127.0.0.1:8000/metrics",
+        "Prediction: POST /predict"
+    ])
+    doc.add_page_break()
+
+    # Page 9
+    add_docx_page(doc, "8. Kubernetes Deployment and Monitoring", [
+        (
+        'The Kubernetes manifest creates a Deployment with two'
+            'replicas and a LoadBalancer Service. Readiness and'
+            'liveness probes call the /health endpoint. Resource'
+            'requests and limits are included to make the deployment'
+            'more production-oriented.'
+        ),
+        (
+        'The API logs prediction requests to standard output. These'
+            'logs can be inspected using docker logs or kubectl logs.'
+            'Prometheus-compatible HTTP metrics are exposed at /metrics'
+            'using prometheus-fastapi-instrumentator.'
+        ),
+        (
+        'For a local demonstration, Docker Desktop Kubernetes or'
+            'Minikube can be used. For a cloud deployment, the image'
+            'should be pushed to a container registry and the'
+            'Kubernetes image reference changed accordingly.'
+        ),
+    ], bullets=[
+        "kubectl apply -f k8s/deployment.yaml",
+        "kubectl get pods",
+        "kubectl get service heart-disease-api",
+        "kubectl logs deployment/heart-disease-api"
+    ], image=ARCHITECTURE)
+    doc.add_page_break()
+
+    # Page 10
+    add_docx_page(doc, "9. Conclusion, Limitations and Submission Checklist", [
+        (
+        'This implementation demonstrates the complete lifecycle'
+            'requested by the assignment: data acquisition, EDA,'
+            'reproducible preprocessing, model comparison and tuning,'
+            'experiment tracking, automated tests, CI/CD,'
+            'containerization, Kubernetes deployment, API logging, and'
+            'metrics.'
+        ),
+        (
+        'A key limitation is that the dataset is relatively small'
+            'and the solution is intended for academic demonstration.'
+            'The prediction must not be used as a medical diagnosis.'
+            'Additional clinical validation, external validation data,'
+            'calibration, fairness analysis, security controls, and'
+            'medical governance would be required for a real clinical'
+            'system.'
+        ),
+        (
+        'Before submission, replace the report placeholders with'
+            'your actual model metrics and screenshots. Add your GitHub'
+            'repository URL and record the required short demonstration'
+            'video.'
+        ),
+    ], bullets=[
+        "Dataset downloaded and EDA completed.",
+        "Two models trained and compared.",
+        "Cross-validation and tuning completed.",
+        "MLflow screenshots captured.",
+        "Unit tests and linting pass.",
+        "Docker build and API test completed.",
+        "Kubernetes deployment and service verified.",
+        "Monitoring/logging demonstrated.",
+        "GitHub Actions run is successful.",
+        "Final report, screenshots, repository URL, and video are ready."
+    ])
+
+    doc.save(REPORT_DOCX)
+
+
+def build_pdf(metrics):
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="SmallBody", parent=styles["BodyText"], fontSize=9, leading=12))
+    doc = SimpleDocTemplate(
+        str(REPORT_PDF),
+        pagesize=A4,
+        rightMargin=45,
+        leftMargin=45,
+        topMargin=45,
+        bottomMargin=45,
+    )
+    story = []
+
+    def page(title, body, bullets=None):
+        story.append(Paragraph(title, styles["Heading1"]))
+        for paragraph in body:
+            story.append(Paragraph(paragraph, styles["BodyText"]))
+            story.append(Spacer(1, 8))
+        for bullet in bullets or []:
+            story.append(Paragraph("• " + bullet, styles["BodyText"]))
+            story.append(Spacer(1, 4))
+        story.append(PageBreak())
+
+    story.append(Spacer(1, 100))
+    story.append(Paragraph("MLOps Assignment 01", styles["Title"]))
+    story.append(Paragraph("Heart Disease UCI Dataset - End-to-End ML System", styles["Heading2"]))
+    story.append(Spacer(1, 30))
+    story.append(Paragraph("Machine Learning Operations (MLOps) - AIMLCZG523", styles["BodyText"]))
+    story.append(Paragraph("Student: __________________________", styles["BodyText"]))
+    story.append(Paragraph("GitHub Repository: __________________________", styles["BodyText"]))
+    story.append(PageBreak())
+
+    page("1. Objective and Problem Statement", [
+        (
+        'The objective is to build a cloud-ready machine learning'
+            'classifier that predicts heart disease risk from patient'
+            'health information.'
+        ),
+        (
+        'The project uses the Heart Disease UCI Cleveland dataset'
+            'and converts the original target 0-4 into a binary target'
+            'where 0 means no disease and values greater than 0 mean'
+            'disease.'
+        ),
+        (
+        'The solution is an educational MLOps demonstration and is'
+            'not a medical diagnostic system.'
+        )
+    ],
+    [
+        "Reproducible preprocessing",
+        "Two classifiers",
+        "MLflow tracking",
+        "CI/CD",
+        "Docker",
+        "Kubernetes",
+        "Monitoring",
+    ])
+    page("2. Data Acquisition and EDA", [
+        (
+        'The project downloads the Cleveland subset from UCI,'
+            'converts missing-value markers to missing values, and'
+            'creates EDA visualizations.'
+        ),
+        (
+        'The final submission should use the actual charts produced'
+            "by the student's run."
+        )
+    ],
+    [
+        "Class balance",
+        "Numeric histograms",
+        "Correlation heatmap",
+        "Age versus maximum heart rate",
+    ])
+    page("3. Feature Engineering and Model Development", [
+        (
+        'Numerical features use median imputation and standard'
+            'scaling. Categorical/discrete features use most-frequent'
+            'imputation and one-hot encoding.'
+        ),
+        (
+        'Logistic Regression is the simple baseline. Random Forest'
+            'provides a nonlinear alternative. Random Forest is tuned'
+            'with five-fold stratified cross-validation using ROC-AUC.'
+        )
+    ], ["80/20 stratified split", "Random state 42", "Accuracy, precision, recall, ROC-AUC"])
+
+    story.append(Paragraph("4. Experimental Results", styles["Heading1"]))
+    if metrics is not None:
+        data = [["Model", "Accuracy", "Precision", "Recall", "ROC-AUC"]]
+        for _, row in metrics.iterrows():
+            values = [
+                f"{float(row[k]):.4f}"
+                for k in ["accuracy", "precision", "recall", "roc_auc"]
+            ]
+            data.append([str(row["model"]), *values])
+    else:
+        data = [
+            ["Model", "Accuracy", "Precision", "Recall", "ROC-AUC"],
+            ["Run training first", "-", "-", "-", "-"],
+        ]
+    table = Table(
+        data,
+        colWidths=[1.8 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch, 0.9 * inch],
+    )
+    table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ]
+        )
+    )
+    story.append(table)
+    story.append(Spacer(1, 15))
+    story.append(Paragraph((
+                           'Use the actual output from'
+                               'reports/figures/model_comparison.csv and explain the'
+                               'model-selection decision.'
+                           ), styles["BodyText"]))
+    story.append(PageBreak())
+
+    page("5. MLflow Experiment Tracking and Reproducibility", [
+        (
+        'MLflow stores local experiment runs, parameters, metrics,'
+            'and plots. The complete preprocessing and model pipeline'
+            'is saved using joblib.'
+        ),
+        "requirements.txt and Docker provide repeatable environments."
+    ], ["MLflow experiment", "ROC and confusion matrix artifacts", "Saved model", "Saved metadata"])
+    page("6. Testing and CI/CD", [
+        (
+        'Pytest checks preprocessing and API behavior. GitHub'
+            'Actions runs linting, data download, tests, training,'
+            'Docker build, and artifact upload.'
+        ),
+        "The workflow is designed to fail on lint or test errors."
+    ], ["pytest -q", "flake8", "training", "Docker build"])
+    page("7. Containerization and API", [
+        (
+        'FastAPI provides /predict, /health, and /metrics. Docker'
+            'packages the service and trained model in an isolated'
+            'environment.'
+        )
+    ], ["Swagger /docs", "Health endpoint", "Prediction endpoint", "Metrics endpoint"])
+
+    story.append(Paragraph("8. Kubernetes Deployment and Monitoring", styles["Heading1"]))
+    story.append(Paragraph((
+                           'The Kubernetes manifest creates two replicas and a'
+                               'LoadBalancer Service with readiness and liveness probes.'
+                               'Application logs are written to standard output and'
+                               'Prometheus-compatible metrics are exposed at /metrics.'
+                           ), styles["BodyText"]))
+    if ARCHITECTURE.exists():
+        story.append(Spacer(1, 15))
+        story.append(
+            Image(str(ARCHITECTURE), width=6.4 * inch, height=2.6 * inch)
+        )
+    story.append(PageBreak())
+
+    page("9. Conclusion, Limitations and Submission Checklist", [
+        (
+        'The project covers the requested MLOps lifecycle from data'
+            'acquisition to deployment and monitoring.'
+        ),
+        (
+        'The system is intended for academic learning. Real'
+            'clinical use would require extensive additional'
+            'validation, security, governance, and medical oversight.'
+        )
+    ],
+    [
+        "Actual metrics inserted",
+        "Screenshots captured",
+        "GitHub Actions green",
+        "Docker verified",
+        "Kubernetes verified",
+        "Video recorded",
+        "Repository URL added",
+    ])
+
+    doc.build(story)
+
+
+def main():
+    metrics = get_metrics()
+    build_docx(metrics)
+    build_pdf(metrics)
+    print(f"Created {REPORT_DOCX}")
+    print(f"Created {REPORT_PDF}")
+
+
+if __name__ == "__main__":
+    main()

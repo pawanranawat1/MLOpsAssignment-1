@@ -1,0 +1,33 @@
+{
+  "model_name": "Random Forest Tuned",
+  "target": "target",
+  "features": [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "binary_target_definition": "0 = no disease, 1 = disease (original UCI target > 0)",
+  "best_parameters": {
+    "model__max_depth": null,
+    "model__min_samples_split": 5,
+    "model__n_estimators": 100
+  },
+  "test_metrics": {
+    "accuracy": 0.8852459016393442,
+    "precision": 0.8387096774193549,
+    "recall": 0.9285714285714286,
+    "roc_auc": 0.9545454545454546
+  },
+  "training_rows": 303,
+  "random_state": 42
+}

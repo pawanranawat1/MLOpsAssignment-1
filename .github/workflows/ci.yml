@@ -1,0 +1,46 @@
+name: Heart Disease MLOps CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  test-and-train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: flake8 src tests --max-line-length=100
+
+      - name: Download dataset
+        run: python -m src.data
+
+      - name: Run unit tests
+        run: pytest -q
+
+      - name: Train model
+        run: python -m src.train
+
+      - name: Build Docker image
+        run: docker build -t heart-disease-api:ci .
+
+      - name: Upload ML artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-artifacts
+          path: |
+            models/
+            reports/figures/
+            mlruns/

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.mlopslab/
+.venv/
+venv/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Python cache
+.pytest_cache/
+.coverage
+
+# Word temporary files
+~$*
+
+# Generated reports
+reports/
