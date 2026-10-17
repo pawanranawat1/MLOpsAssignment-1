@@ -17,6 +17,3 @@ mlflow.db
 
 # Word temporary files
 ~$*
-
-# Generated reports
-reports/
