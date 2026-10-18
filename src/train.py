@@ -562,9 +562,9 @@ def main(skip_mlflow: bool = False):
 
             mlflow.sklearn.log_model(
             sk_model=final_model,
-            name="model",
+            artifact_path="model",
             registered_model_name=MLFLOW_MODEL_NAME,
-            skops_trusted_types=["numpy.dtype"],
+            #skops_trusted_types=["numpy.dtype"],
             )
 
     # ---------------------------------------------------------
