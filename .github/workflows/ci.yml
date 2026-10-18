@@ -49,6 +49,12 @@ jobs:
             sleep 2
           done
 
+          if ! curl -sf http://127.0.0.1:5000/health; then
+            echo "MLflow server failed to start"
+            cat mlflow.log
+            exit 1
+          fi
+
       - name: Train model
         run: python -m src.train
 
@@ -56,6 +62,7 @@ jobs:
         run: docker build -t heart-disease-api:ci .
 
       - name: Upload ML artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ml-artifacts
