@@ -28,7 +28,7 @@ jobs:
         run: python -m src.data
 
       - name: Run unit tests
-        run: pytest -q
+        run: PYTHONPATH=. pytest -q
 
       - name: Train model
         run: python -m src.train
