@@ -9,6 +9,7 @@ on:
 jobs:
   test-and-train:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,6 +31,24 @@ jobs:
       - name: Run unit tests
         run: PYTHONPATH=. pytest -q
 
+      - name: Start MLflow server
+        run: |
+          mlflow server \
+            --host 127.0.0.1 \
+            --port 5000 \
+            --backend-store-uri sqlite:///mlflow.db \
+            --default-artifact-root ./mlartifacts > mlflow.log 2>&1 &
+
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:5000/health; then
+              echo "MLflow server is ready"
+              break
+            fi
+
+            echo "Waiting for MLflow server..."
+            sleep 2
+          done
+
       - name: Train model
         run: python -m src.train
 
@@ -43,4 +62,5 @@ jobs:
           path: |
             models/
             reports/figures/
-            mlruns/
+            mlartifacts/
+            mlflow.log
