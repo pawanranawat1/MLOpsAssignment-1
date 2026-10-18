@@ -228,6 +228,12 @@ def main(skip_mlflow: bool = False):
         if run_context:
             run_context.__enter__()
 
+        if not skip_mlflow:
+            mlflow.set_tag(
+                "purpose",
+                f"Evaluate {name} classification model",
+            )
+
         try:
             model.fit(
                 x_train,
@@ -352,6 +358,12 @@ def main(skip_mlflow: bool = False):
 
     if run_context:
         run_context.__enter__()
+
+    if not skip_mlflow:
+        mlflow.set_tag(
+            "purpose",
+            "Evaluate hyperparameter-tuned Random Forest model",
+        )
 
     try:
         tuned.fit(
@@ -512,6 +524,11 @@ def main(skip_mlflow: bool = False):
         with mlflow.start_run(
             run_name="Final Model Packaging"
         ):
+
+            mlflow.set_tag(
+                "purpose",
+                "Package and register the dynamically selected best model",
+            )
 
             mlflow.log_param(
                 "selected_model",
