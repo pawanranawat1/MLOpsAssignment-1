@@ -10,6 +10,7 @@ MODEL_PATH = MODEL_DIR / "heart_disease_model.joblib"
 METADATA_PATH = MODEL_DIR / "model_metadata.json"
 FIGURES_DIR = ROOT_DIR / "reports" / "figures"
 MLRUNS_DIR = "http://127.0.0.1:5000"
+MLFLOW_MODEL_NAME = "HeartDiseaseClassifier"
 
 FEATURE_COLUMNS = [
     "age",
