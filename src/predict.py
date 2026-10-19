@@ -2,7 +2,7 @@
 
 import argparse
 import json
-
+import pandas as pd
 import joblib
 
 from src.config import MODEL_PATH
@@ -11,8 +11,11 @@ from src.config import MODEL_PATH
 def predict_from_json(input_path: str):
     model = joblib.load(MODEL_PATH)
     data = json.loads(open(input_path, encoding="utf-8").read())
-    prediction = int(model.predict([data])[0])
-    probability = float(model.predict_proba([data])[0][1])
+    df = pd.DataFrame([data])
+
+    prediction = int(model.predict(df)[0])
+    probability = float(model.predict_proba(df)[0][1])
+    
     return {
         "prediction": prediction,
         "prediction_label": "heart disease risk" if prediction == 1 else "no heart disease risk",

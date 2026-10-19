@@ -1,4 +1,3 @@
-cat > k8s/monitoring/prometheus.yaml <<'EOF'
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,14 +6,12 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
-
     scrape_configs:
-      - job_name: "heart-disease-api"
+      - job_name: heart-disease-api
         metrics_path: /metrics
         static_configs:
           - targets:
-              - "heart-disease-api.default.svc.cluster.local:80"
-
+              - heart-disease-api.default.svc.cluster.local:80
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -34,8 +31,8 @@ spec:
         - name: prometheus
           image: prom/prometheus:v3.5.0
           args:
-            - "--config.file=/etc/prometheus/prometheus.yml"
-            - "--storage.tsdb.path=/prometheus"
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
           ports:
             - containerPort: 9090
           volumeMounts:
@@ -49,7 +46,6 @@ spec:
             name: prometheus-config
         - name: storage
           emptyDir: {}
-
 ---
 apiVersion: v1
 kind: Service
@@ -62,4 +58,3 @@ spec:
     - port: 9090
       targetPort: 9090
   type: LoadBalancer
-EOF

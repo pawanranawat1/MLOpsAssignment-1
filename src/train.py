@@ -18,7 +18,7 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     RocCurveDisplay,
 )
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
+from sklearn.model_selection import cross_validate, GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 
 from src.config import (
@@ -58,6 +58,33 @@ def evaluate_model(model, x_test, y_test):
             y_test,
             probabilities,
         ),
+    }
+
+
+def cross_validation_metrics(model, x_data, y_data, cv):
+    """Calculate 5-fold stratified CV metrics for a classification pipeline."""
+    scoring = {
+        "accuracy": "accuracy",
+        "precision": "precision",
+        "recall": "recall",
+        "roc_auc": "roc_auc",
+    }
+
+    scores = cross_validate(
+        model,
+        x_data,
+        y_data,
+        cv=cv,
+        scoring=scoring,
+        n_jobs=-1,
+    )
+
+    return {
+        "cv_accuracy_mean": scores["test_accuracy"].mean(),
+        "cv_accuracy_std": scores["test_accuracy"].std(),
+        "cv_precision_mean": scores["test_precision"].mean(),
+        "cv_recall_mean": scores["test_recall"].mean(),
+        "cv_roc_auc_mean": scores["test_roc_auc"].mean(),
     }
 
 
@@ -206,6 +233,12 @@ def main(skip_mlflow: bool = False):
     # ---------------------------------------------------------
     # 5. Train and evaluate base models
     # ---------------------------------------------------------
+    cv = StratifiedKFold(
+        n_splits=5,
+        shuffle=True,
+        random_state=RANDOM_STATE,
+    )
+
     for name, model in zip(
         [
             "Logistic Regression",
@@ -248,6 +281,16 @@ def main(skip_mlflow: bool = False):
                 y_test,
             )
 
+            cv_metrics = cross_validation_metrics(
+                model,
+                x_train,
+                y_train,
+                cv,
+            )
+
+            if not skip_mlflow:
+                mlflow.log_metrics(cv_metrics)
+
             roc_path, cm_path = save_plots(
                 model,
                 x_test,
@@ -286,6 +329,7 @@ def main(skip_mlflow: bool = False):
             row = {
                 "model": name,
                 **metrics,
+                **cv_metrics,
             }
 
             results.append(row)
@@ -303,12 +347,6 @@ def main(skip_mlflow: bool = False):
     # ---------------------------------------------------------
     # 6. Tune Random Forest using 5-fold cross-validation
     # ---------------------------------------------------------
-    cv = StratifiedKFold(
-        n_splits=5,
-        shuffle=True,
-        random_state=RANDOM_STATE,
-    )
-
     rf_pipeline = Pipeline(
         steps=[
             (
@@ -377,6 +415,16 @@ def main(skip_mlflow: bool = False):
             y_test,
         )
 
+        tuned_cv_metrics = cross_validation_metrics(
+            tuned.best_estimator_,
+            x_train,
+            y_train,
+            cv,
+        )
+
+        if not skip_mlflow:
+            mlflow.log_metrics(tuned_cv_metrics)
+
         roc_path, cm_path = save_plots(
             tuned,
             x_test,
@@ -410,6 +458,7 @@ def main(skip_mlflow: bool = False):
             {
                 "model": "Random Forest Tuned",
                 **tuned_metrics,
+                **tuned_cv_metrics,
             }
         )
 

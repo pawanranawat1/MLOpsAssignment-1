@@ -3,14 +3,6 @@
 This file contains the commands used to execute and verify the MLOps Assignment-1 project.
 
 ## 1. Environment Setup
-
-Create and activate the Python environment:
-
-```bash
-conda create -n mlopslab python=3.12.9
-conda activate mlopslab
-```
-
 Install project dependencies:
 
 ```bash
@@ -56,7 +48,6 @@ mlflow server   --host 0.0.0.0   --port 5000   --backend-store-uri sqlite:///mlf
 In another terminal, activate the environment and run:
 
 ```bash
-conda activate mlopslab
 python -m src.train
 ```
 
@@ -71,7 +62,7 @@ models/
 Verify that the saved model can be loaded and used for prediction:
 
 ```bash
-python -m src.predict
+python -m src.predict data/sample_patient.json
 ```
 
 ## 6. Unit Tests
