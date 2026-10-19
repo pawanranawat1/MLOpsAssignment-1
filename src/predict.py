@@ -15,7 +15,7 @@ def predict_from_json(input_path: str):
 
     prediction = int(model.predict(df)[0])
     probability = float(model.predict_proba(df)[0][1])
-    
+
     return {
         "prediction": prediction,
         "prediction_label": "heart disease risk" if prediction == 1 else "no heart disease risk",
